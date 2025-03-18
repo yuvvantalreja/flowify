@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 <div align="left">
   <img src="assets/logo_bg.png" alt="flowify" width="200"/>
 </div>
@@ -33,6 +32,3 @@ This project was created during **TartanHacks 2025**. Feel free to contribute!
 
 ## Team
 **Team Hackintosh**: [Aryan Daga](https://github.com/aryand2006), [Lakshya Gera](https://github.com/lakrage), [Samatva Kasat](https://github.com/samkas125), [Yuvvan Talreja](https://github.com/yuvvantalreja)
-=======
-# flowify
->>>>>>> c9bbb816b8dfddab018ca441ce9f72d74dae11ab
