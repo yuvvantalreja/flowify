@@ -1,5 +1,7 @@
 import { pipeline, env } from 'https://unpkg.com/@xenova/transformers@2.16.0/dist/transformers.min.js';
 
+// Configuration
+const API_BASE_URL = 'https://YOUR_USERNAME.pythonanywhere.com'; // REPLACE WITH YOUR PYTHONANYWHERE USERNAME
 
 env.allowLocalModels = false;
 env.useBrowserCache = true;
@@ -158,7 +160,7 @@ async function analyzeTopics() {
         statusDiv.textContent = 'Analyzing topics...';
         progress.style.width = '0%';
 
-        const response = await fetch('/analyze', {
+        const response = await fetch(`${API_BASE_URL}/analyze`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -856,5 +858,26 @@ class TopicMindmap {
         } catch (error) {
             console.error('Error updating mindmap:', error);
         }
+    }
+}
+
+async function uploadVideo(file) {
+    try {
+        const formData = new FormData();
+        formData.append('video', file);
+        
+        const response = await fetch(`${API_BASE_URL}/upload`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to upload video');
+        }
+        
+        return await response.json();
+    } catch (error) {
+        console.error('Upload error:', error);
+        throw error;
     }
 }

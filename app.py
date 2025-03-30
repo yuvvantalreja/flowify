@@ -1,9 +1,11 @@
 from flask import Flask, render_template, request, jsonify
+from flask_cors import CORS
 import os
 from werkzeug.utils import secure_filename
 from topic_segmenter import TopicSegmenter
 
 app = Flask(__name__)
+CORS(app)  # Add CORS support for cross-domain requests
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 

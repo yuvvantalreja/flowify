@@ -109,14 +109,14 @@ class TopicSegmenter:
             text = text.strip().lower()
             
             if sentence in text or text in sentence:
-                # Try to get the timestamp after the previous timestamp
+
                 if i > 0 and i < len(chunks):
                     return current_timestamp
                 return previous_timestamp
             
             previous_timestamp = current_timestamp
                 
-        return current_timestamp  # Return last timestamp if sentence not found
+        return current_timestamp 
 
     
     def segment_transcript(self, text):
@@ -260,7 +260,7 @@ help us make better places, they can help us lead better lives Thank you. [362] 
     print(topic_history)
     for i, (segment, topic_id) in enumerate(zip(segments, topic_mappings)):
         print(f"Segment {i+1} (Part of {topic_history[topic_id][1]}):")
-        print(f"Topic Sentence: {segment[0]}")  # Print first sentence as topic sentence
+        print(f"Topic Sentence: {segment[0]}")
         print(f"Closest Timestamp: {topic_history[topic_id][3]} seconds")
         print("-" * 50)
         print("\n".join(segment))
