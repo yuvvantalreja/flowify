@@ -2,8 +2,10 @@
   <img src="assets/logo_bg.png" alt="flowify" width="200"/>
 </div>
 
+
+
 ## Overview
-Flowify is an intelligent web application that transforms video content into intuitive, visual mind maps. By leveraging advanced NLP techniques and clustering algorithms, Flowify automatically organizes video content into coherent topics and subtopics. Flowify is purely algorithmic, and doesn't require any generative AI.
+Flowify is an intelligent web application that transforms video content into intuitive, visual mind maps. By leveraging advanced NLP techniques and clustering algorithms, Flowify automatically organizes video content into coherent topics and subtopics. Flowify is purely algorithmic, and doesn't require any generative AI. (https://youtu.be/yjlV7t9mcps)
 
 <img width="1470" alt="Screenshot 2025-03-17 at 8 16 56 PM" src="https://github.com/user-attachments/assets/db5c6664-e840-4bd0-9e4f-c933eb757749" />
 
