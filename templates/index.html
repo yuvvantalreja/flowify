@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,65 +18,167 @@
             </div>
         </header>
 
+        <!-- Theme Toggle Button -->
+        <div class="theme-toggle" id="themeToggle">
+            <div class="theme-toggle-icon light-icon">
+                <i class="fas fa-sun"></i>
+            </div>
+            <div class="theme-toggle-icon dark-icon">
+                <i class="fas fa-moon"></i>
+            </div>
+        </div>
+        
         <main class="main-content">
-            <div class="upload-panel">
-                <div class="upload-section">
-                    <div class="upload-container" id="dropZone">
-                        <i class="fas fa-cloud-upload-alt upload-icon"></i>
-                        <label for="fileInput" class="upload-label">
-                            <span class="upload-text">Drop video file here or click to upload</span>
-                            <span class="upload-subtext">Supports MP4, WebM, MOV formats</span>
-                        </label>
-                        <input type="file" id="fileInput" accept="video/*">
-                    </div>
-
-                    <div class="model-selector">
-                        <label for="modelSelector" class="model-label">Processing Model</label>
-                        <div class="select-wrapper">
-                            <select id="modelSelector">
-                                <option value="Xenova/whisper-tiny.en">Whisper Tiny (Fast)</option>
-                                <option value="Xenova/whisper-base.en">Whisper Base</option>
-                                <option value="Xenova/whisper-small.en" selected>Whisper Small</option>
-                                <option value="Xenova/whisper-medium.en">Whisper Medium</option>
-                            </select>
-                            <i class="fas fa-chevron-down select-icon"></i>
+            <div class="upload-panel card">
+                <div class="card-body">
+                    <div class="upload-section">
+                        <div class="upload-container" id="dropZone">
+                            <div class="particles">
+                                <!-- Particles will be added dynamically via JS -->
+                            </div>
+                            <div class="upload-icon-container">
+                                <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                            </div>
+                            <h3 class="upload-text">Drop video file here or click to upload</h3>
+                            <p class="upload-subtext">Supports MP4, WebM, MOV formats</p>
+                            <input type="file" id="fileInput" accept="video/*" style="display:none;">
+                            <div class="upload-progress">
+                                <div class="upload-progress-bar" style="width: 0%"></div>
+                            </div>
                         </div>
-                        <div id="modelStatus" class="model-status"></div>
+
+                        <div class="model-selector card">
+                            <div class="card-header">
+                                <h3 class="card-title"><i class="fas fa-cog"></i> Processing Model</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="select-wrapper">
+                                    <select id="modelSelector">
+                                        <option value="Xenova/whisper-tiny.en">Whisper Tiny (Fast)</option>
+                                        <option value="Xenova/whisper-base.en">Whisper Base</option>
+                                        <option value="Xenova/whisper-small.en" selected>Whisper Small</option>
+                                        <option value="Xenova/whisper-medium.en">Whisper Medium</option>
+                                    </select>
+                                    <i class="fas fa-chevron-down select-icon"></i>
+                                </div>
+                                <div id="modelStatus" class="model-status">
+                                    <i class="fas fa-check-circle"></i> Model available
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                <div class="video-preview">
-                    <video id="videoPlayer" controls></video>
-                </div>
+                    <div class="video-preview">
+                        <video id="videoPlayer" controls></video>
+                        
+                        <!-- Custom Video Controls -->
+                        <div class="video-controls">
+                            <button class="video-control-button" id="playPauseBtn">
+                                <i class="fas fa-play video-play-icon"></i>
+                                <i class="fas fa-pause video-pause-icon"></i>
+                            </button>
+                            <div class="video-time" id="currentTime">0:00</div>
+                            <div class="video-progress">
+                                <div class="video-progress-bar">
+                                    <div class="video-progress-handle"></div>
+                                </div>
+                            </div>
+                            <div class="video-time" id="duration">0:00</div>
+                            <button class="video-control-button" id="muteBtn">
+                                <i class="fas fa-volume-up"></i>
+                            </button>
+                            <button class="video-control-button" id="fullscreenBtn">
+                                <i class="fas fa-expand"></i>
+                            </button>
+                        </div>
+                    </div>
 
-                <div class="action-buttons">
-                    <button id="transcribeButton" class="primary-button" disabled>
-                        <i class="fas fa-microphone"></i>
-                        Transcribe Video
-                    </button>
-                    <button id="analyzeButton" class="secondary-button" disabled>
-                        <i class="fas fa-brain"></i>
-                        Analyze Topics
-                    </button>
-                </div>
+                    <div class="action-buttons">
+                        <button id="transcribeButton" class="action-button primary" disabled>
+                            <i class="fas fa-microphone"></i>
+                            Transcribe Video
+                        </button>
+                        <button id="analyzeButton" class="action-button secondary" disabled>
+                            <i class="fas fa-brain"></i>
+                            Analyze Topics
+                        </button>
+                    </div>
 
-                <div class="progress-container">
-                    <div class="status-text" id="status">Ready to process</div>
-                    <div class="progress-bar">
-                        <div class="progress"></div>
+                    <!-- New Progress Visualization -->
+                    <div class="status-progress animate-fade-in">
+                        <div class="status-text" id="status">
+                            <i class="fas fa-info-circle"></i>
+                            <span>Ready to transcribe</span>
+                        </div>
+                        
+                        <div class="progress-container">
+                            <div class="progress-steps">
+                                <div class="progress-step" id="uploadStep">
+                                    <div class="progress-step-line"></div>
+                                    <div class="progress-step-indicator">
+                                        <i class="fas fa-upload progress-step-icon"></i>
+                                    </div>
+                                    <div class="progress-step-label">Upload</div>
+                                </div>
+                                <div class="progress-step" id="transcribeStep">
+                                    <div class="progress-step-line"></div>
+                                    <div class="progress-step-indicator">
+                                        <i class="fas fa-microphone progress-step-icon"></i>
+                                    </div>
+                                    <div class="progress-step-label">Transcribe</div>
+                                </div>
+                                <div class="progress-step" id="analyzeStep">
+                                    <div class="progress-step-line"></div>
+                                    <div class="progress-step-indicator">
+                                        <i class="fas fa-brain progress-step-icon"></i>
+                                    </div>
+                                    <div class="progress-step-label">Analyze</div>
+                                </div>
+                                <div class="progress-step" id="visualizeStep">
+                                    <div class="progress-step-indicator">
+                                        <i class="fas fa-project-diagram progress-step-icon"></i>
+                                    </div>
+                                    <div class="progress-step-label">Visualize</div>
+                                </div>
+                            </div>
+                            
+                            <div class="progress-bar">
+                                <div class="progress-bar-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="results-panel">
-                <div class="transcription-container">
-                    <h2><i class="fas fa-file-alt"></i> Transcription</h2>
-                    <div id="transcription" class="transcription-content"></div>
+                <div class="content-container animate-fade-in">
+                    <div class="content-header">
+                        <h2 class="content-title"><i class="fas fa-file-alt"></i> Transcription</h2>
+                    </div>
+                    <div class="content-body">
+                        <div id="transcription" class="content-scroll">
+                            <div class="empty-state">
+                                <i class="fas fa-file-alt"></i>
+                                <h3 class="empty-state-title">No transcription yet</h3>
+                                <p class="empty-state-description">Upload a video and click "Transcribe Video" to see the transcription here</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="topics-container">
-                    <h2><i class="fas fa-list"></i> Topics</h2>
-                    <div id="topicResults" class="topics-content"></div>
+                <div class="content-container animate-fade-in">
+                    <div class="content-header">
+                        <h2 class="content-title"><i class="fas fa-list"></i> Topics</h2>
+                    </div>
+                    <div class="content-body">
+                        <div id="topicResults" class="content-scroll">
+                            <div class="empty-state">
+                                <i class="fas fa-brain"></i>
+                                <h3 class="empty-state-title">No topics analyzed</h3>
+                                <p class="empty-state-description">After transcribing, click "Analyze Topics" to identify key topics in your video</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -90,6 +192,9 @@
                     <video id="overlayVideo" controls>
                         Your browser does not support the video element.
                     </video>
+                    <button id="videoCloseButton" class="video-close-button">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
                 <div id="videoInfo" class="video-info"></div>
             </div>
@@ -117,6 +222,88 @@
                 </div>
                 <div id="mindmap" class="fullscreen-mindmap"></div>
             </div>
+        </div>
+    </div>
+
+    <!-- Node Context Menu -->
+    <div id="nodeContextMenu" class="node-context-menu">
+        <div class="context-menu-item" id="editNodeAction">
+            <i class="fas fa-edit"></i>
+            Edit node
+        </div>
+        <div class="context-menu-item" id="addChildAction">
+            <i class="fas fa-plus-circle"></i>
+            Add child node
+        </div>
+        <div class="context-menu-item" id="addParentAction">
+            <i class="fas fa-level-up-alt"></i>
+            Add parent node
+        </div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" id="focusNodeAction">
+            <i class="fas fa-search-plus"></i>
+            Focus on this branch
+        </div>
+        <div class="context-menu-item" id="expandCollapseAction">
+            <i class="fas fa-angle-double-down"></i>
+            Expand all children
+        </div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" id="nodeColorAction">
+            <i class="fas fa-palette"></i>
+            Change color
+        </div>
+        <div class="color-picker-container" id="colorPicker" style="display: none;">
+            <div class="color-picker-label">Select a color:</div>
+            <div class="color-options">
+                <div class="color-option" style="background-color: #3498db;" data-color="blue"></div>
+                <div class="color-option" style="background-color: #2ecc71;" data-color="green"></div>
+                <div class="color-option" style="background-color: #e74c3c;" data-color="red"></div>
+                <div class="color-option" style="background-color: #9b59b6;" data-color="purple"></div>
+                <div class="color-option" style="background-color: #e67e22;" data-color="orange"></div>
+                <div class="color-option" style="background-color: #f1c40f;" data-color="yellow"></div>
+                <div class="color-option" style="background-color: #1abc9c;" data-color="teal"></div>
+                <div class="color-option" style="background-color: #95a5a6;" data-color="gray"></div>
+            </div>
+        </div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" id="deleteNodeAction">
+            <i class="fas fa-trash-alt"></i>
+            Delete node
+        </div>
+    </div>
+    
+    <!-- Floating Action Button (FAB) -->
+    <div class="fab-container" id="fabContainer">
+        <button class="fab-button" id="mainFab">
+            <i class="fas fa-plus"></i>
+        </button>
+        <div class="fab-options">
+            <button class="fab-option" id="exportPdfBtn" title="Export as PDF">
+                <i class="fas fa-file-pdf"></i>
+            </button>
+            <button class="fab-option" id="exportPngBtn" title="Export as PNG">
+                <i class="fas fa-file-image"></i>
+            </button>
+            <button class="fab-option" id="exportSvgBtn" title="Export as SVG">
+                <i class="fas fa-file-code"></i>
+            </button>
+            <button class="fab-option" id="shareMindmapBtn" title="Share Mindmap">
+                <i class="fas fa-share-alt"></i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Results Gallery -->
+    <div class="gallery-container" id="resultsGallery">
+        <div class="gallery-header">
+            <h2>Recent Mindmaps</h2>
+            <button class="gallery-close" id="galleryClose">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="gallery-content" id="galleryContent">
+            <!-- Gallery items will be populated by JavaScript -->
         </div>
     </div>
 

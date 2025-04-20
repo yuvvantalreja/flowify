@@ -1,0 +1,5 @@
+panning, scrolling, zooming issue
+keyword display issue
+video seeking to time issue
+node button error
+chunk duration can depend on length of video
