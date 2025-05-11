@@ -1,4 +1,8 @@
-from flask import Flask, request, jsonify, render_template, send_from_directory
+from fastapi import FastAPI, Request, HTTPException, Response, Body
+from fastapi.responses import JSONResponse, HTMLResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from starlette.staticfiles import StaticFiles as StarletteStaticFiles
 import os
 import base64
 import numpy as np
@@ -8,23 +12,61 @@ from transformers import pipeline
 import threading
 import json
 import logging
+from pydantic import BaseModel
+from typing import Optional, Dict, Any, List
 from topic_segmenter import TopicSegmenter
+from middleware import HTTPSProxyMiddleware
 
-app = Flask(__name__)
+# Configure logging
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
+app = FastAPI(title="Flowify", description="Audio transcription and topic segmentation API")
 
+# Add custom middleware for HTTPS handling
+app.add_middleware(HTTPSProxyMiddleware)
+
+# Configure templates with HTTPS handling
+templates = Jinja2Templates(directory="templates")
+
+# Custom static file handling to ensure proper URL scheme
+class SecureStaticFiles(StarletteStaticFiles):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+    
+    async def get_response(self, path, scope):
+        # Force scope to use HTTPS when behind proxy
+        if "headers" in scope and any(h[0] == b"x-forwarded-proto" and h[1] == b"https" for h in scope["headers"]):
+            scope["scheme"] = "https"
+        
+        response = await super().get_response(path, scope)
+        return response
+
+# Mount static files with secure handler
+app.mount("/static", SecureStaticFiles(directory="static"), name="static")
+
+# Models and locks
 models = {}
 model_lock = threading.Lock()
 
+class AudioData(BaseModel):
+    audio: str
+    model: Optional[str] = "openai/whisper-base"
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+class TranscriptData(BaseModel):
+    transcript: str
 
-@app.route('/static/<path:path>')
-def serve_static(path):
-    return send_from_directory('static', path)
+class ModelCheck(BaseModel):
+    model: str
+
+@app.get("/", response_class=HTMLResponse)
+async def index(request: Request):
+    logger.info(f"Serving index.html with base_url={request.base_url}, url={request.url}")
+    
+    # Ensure template knows the correct scheme
+    context = {"request": request}
+    
+    return templates.TemplateResponse("index.html", context)
 
 def get_model(model_name):
     """Load and cache the model"""
@@ -32,13 +74,10 @@ def get_model(model_name):
         if model_name not in models:
             logging.info(f"Loading model: {model_name}")
             
-
             hf_model_name = model_name
             if model_name.startswith('Xenova/'):
-
                 base_name = model_name.split('/')[-1] 
                 if '.en' in base_name:
-
                     size = base_name.split('.')[0].replace('whisper-', '')
                     hf_model_name = f"openai/whisper-{size}"
                 else:
@@ -47,13 +86,56 @@ def get_model(model_name):
                 
                 logging.info(f"Converting Xenova model {model_name} to {hf_model_name}")
             
-            models[model_name] = pipeline(
-                "automatic-speech-recognition", 
-                hf_model_name,
-                chunk_length_s=30,
-                stride_length_s=5
-            )
-            logging.info(f"Model {model_name} loaded successfully")
+            try:
+                # Load the model using TensorFlow compatibility mode
+                import tensorflow as tf
+                logging.info(f"TensorFlow version: {tf.__version__}")
+                
+                # Configure pipeline with correct parameters to avoid conflicts
+                models[model_name] = pipeline(
+                    "automatic-speech-recognition", 
+                    model=hf_model_name,
+                    chunk_length_s=30,
+                    stride_length_s=5,
+                    framework="tf",  # Explicitly use TensorFlow
+                    model_kwargs={
+                        "attention_mask": True,  # Explicitly set attention mask
+                        "use_cache": True,
+                    }
+                )
+                logging.info(f"Model {model_name} loaded successfully with TensorFlow")
+            except Exception as e:
+                logging.error(f"Error loading model with TensorFlow: {str(e)}")
+                try:
+                    # Fallback to PyTorch with more specific configurations
+                    from transformers import AutoProcessor, AutoModelForSpeechSeq2Seq
+                    
+                    # First load processor and model separately to customize configs
+                    processor = AutoProcessor.from_pretrained(hf_model_name)
+                    model = AutoModelForSpeechSeq2Seq.from_pretrained(
+                        hf_model_name,
+                        use_cache=True,
+                        attention_mask=True
+                    )
+                    
+                    # Create the pipeline with the initialized model and processor
+                    models[model_name] = pipeline(
+                        "automatic-speech-recognition", 
+                        model=model,
+                        tokenizer=processor,
+                        feature_extractor=processor,
+                        chunk_length_s=30,
+                        stride_length_s=5,
+                        generate_kwargs={
+                            "task": "transcribe",
+                            "language": "english",
+                            # Don't set forced_decoder_ids here to avoid conflict
+                        }
+                    )
+                    logging.info(f"Model {model_name} loaded successfully with PyTorch")
+                except Exception as e2:
+                    logging.error(f"Failed to load model {model_name}: {str(e2)}")
+                    raise RuntimeError(f"Failed to load model {model_name}: {str(e2)}")
         return models[model_name]
 
 def process_audio(audio_data, sample_rate=16000, model_name="openai/whisper-base"):
@@ -61,7 +143,6 @@ def process_audio(audio_data, sample_rate=16000, model_name="openai/whisper-base
     try:
         model = get_model(model_name)
         
-
         chunk_duration = 30
         samples_per_chunk = chunk_duration * sample_rate
         total_chunks = (len(audio_data) + samples_per_chunk - 1) // samples_per_chunk
@@ -75,13 +156,16 @@ def process_audio(audio_data, sample_rate=16000, model_name="openai/whisper-base
             
             logging.info(f"Processing chunk {i+1}/{total_chunks}")
             
+            # Use consistent parameters for model inference
             result = model(
                 chunk,
                 return_timestamps=True,
-                generate_kwargs={"language": "english", "task": "transcribe"}
+                generate_kwargs={
+                    "task": "transcribe",
+                    "language": "english"
+                }
             )
             
-
             if "chunks" in result and len(result["chunks"]) > 0:
                 for chunk_with_time in result["chunks"]:
                     if "timestamp" in chunk_with_time and len(chunk_with_time["timestamp"]) == 2:
@@ -98,43 +182,30 @@ def process_audio(audio_data, sample_rate=16000, model_name="openai/whisper-base
         logging.error(f"Error processing audio: {str(e)}")
         raise
 
-@app.route('/transcribe', methods=['POST'])
-def transcribe():
+@app.post("/transcribe")
+async def transcribe(data: AudioData):
     try:
-        data = request.json
-        
-        if not data or 'audio' not in data:
-            return jsonify({"error": "No audio data provided"}), 400
-            
-
-        audio_base64 = data['audio']
+        audio_base64 = data.audio
         audio_bytes = base64.b64decode(audio_base64)
         audio_np = np.frombuffer(audio_bytes, dtype=np.float32)
         
-
-        model_name = data.get('model', 'openai/whisper-base')
+        model_name = data.model
         
-
         start_time = time.time()
         transcript = process_audio(audio_np, model_name=model_name)
         elapsed_time = time.time() - start_time
         
         logging.info(f"Transcription completed in {elapsed_time:.2f} seconds")
         
-        return jsonify({"transcript": transcript})
+        return {"transcript": transcript}
     except Exception as e:
         logging.error(f"Transcription error: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.route('/analyze', methods=['POST'])
-def analyze_topics():
+@app.post("/analyze")
+async def analyze_topics(data: TranscriptData):
     try:
-        data = request.json
-        
-        if not data or 'transcript' not in data:
-            return jsonify({"error": "No transcript provided"}), 400
-            
-        transcript = data['transcript']
+        transcript = data.transcript
         
         segmenter = TopicSegmenter(
             window_size=2,  
@@ -193,24 +264,20 @@ def analyze_topics():
                 })
                 added_segments.add(i)
         
-        return jsonify({"segments": results})
+        return {"segments": results}
     except Exception as e:
         logging.error(f"Analysis error: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.route('/check_model', methods=['POST'])
-def check_model():
+@app.post("/check_model")
+async def check_model(data: ModelCheck):
     try:
-        data = request.json
-        if not data or 'model' not in data:
-            return jsonify({"error": "No model specified"}), 400
-            
-        model_name = data['model']
+        model_name = data.model
         logging.info(f"Checking model availability: {model_name}")
         
         if model_name in models:
             logging.info(f"Model {model_name} is already loaded")
-            return jsonify({"available": True})
+            return {"available": True}
             
         supported_prefixes = [
             "openai/whisper",
@@ -221,10 +288,16 @@ def check_model():
         available = any(model_name.startswith(prefix) or model_name.lower().startswith(prefix.lower()) for prefix in supported_prefixes)
         
         logging.info(f"Model {model_name} availability: {available}")
-        return jsonify({"available": available})
+        return {"available": available}
     except Exception as e:
         logging.error(f"Model check error: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        raise HTTPException(status_code=500, detail=str(e))
 
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+# Special route for serving the index.html file
+@app.get("/favicon.ico")
+async def favicon():
+    return FileResponse("static/favicon.ico", media_type="image/x-icon")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("fastapi_app:app", host="0.0.0.0", port=7860, reload=True) 

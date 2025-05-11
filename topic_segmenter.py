@@ -10,7 +10,7 @@ from sklearn.cluster import AgglomerativeClustering
 
 class TopicSegmenter:
     def __init__(self, window_size=3, similarity_threshold=0.2, context_size=2, min_segment_size=2, topic_similarity_threshold=0.3, 
-                max_topics=8, hierarchical_threshold=0.6):
+                max_topics=8, hierarchical_threshold=0.6, model_name="all-MiniLM-L6-v2"):
         self.window_size = window_size
         self.similarity_threshold = similarity_threshold
         self.context_size = context_size
@@ -18,7 +18,25 @@ class TopicSegmenter:
         self.topic_similarity_threshold = topic_similarity_threshold
         self.max_topics = max_topics  # Maximum number of main topics
         self.hierarchical_threshold = hierarchical_threshold  # Threshold for hierarchical clustering
-        self.keyword_extractor = KeyBERT()
+        
+        try:
+            # Explicitly set the model to a lightweight and compatible one
+            import os
+            os.environ["TOKENIZERS_PARALLELISM"] = "false"  # Prevent parallelism warning
+            
+            # Try using sentence-transformers directly first
+            try:
+                from sentence_transformers import SentenceTransformer
+                embedding_model = SentenceTransformer(model_name)
+                self.keyword_extractor = KeyBERT(model=embedding_model)
+            except (ImportError, ValueError, RuntimeError) as e:
+                # Fallback to default model with lower-level settings
+                self.keyword_extractor = KeyBERT(model='distilbert-base-nli-mean-tokens')
+        except Exception as e:
+            import logging
+            logging.error(f"Error initializing KeyBERT model: {str(e)}")
+            # Last resort fallback to simple keyword extraction without a model
+            self.keyword_extractor = None
         
         self.vectorizer = TfidfVectorizer(
             stop_words='english',
@@ -102,16 +120,51 @@ class TopicSegmenter:
             text = ' '.join(sentences)
         else:
             text = sentences
-            
-        keywords = self.keyword_extractor.extract_keywords(
-            text, 
-            keyphrase_ngram_range=(1, 2),  # Allow for 1-2 word keyphrases
-            stop_words='english',
-            top_n=top_n
-        )
         
-        sorted_keywords = sorted(keywords, key=lambda x: x[1], reverse=True)
-        return [kw[0] for kw in sorted_keywords[:top_n]]
+        # If KeyBERT was not properly initialized, use TF-IDF as a fallback
+        if self.keyword_extractor is None:
+            try:
+                # Use scikit-learn's TF-IDF for keyword extraction as fallback
+                from sklearn.feature_extraction.text import TfidfVectorizer
+                
+                # Create a temporary vectorizer for this text only
+                temp_vectorizer = TfidfVectorizer(
+                    max_features=50,
+                    stop_words='english',
+                    ngram_range=(1, 2)
+                )
+                
+                # Fit and transform on this specific text
+                tfidf_matrix = temp_vectorizer.fit_transform([text])
+                feature_names = temp_vectorizer.get_feature_names_out()
+                
+                # Get top keywords based on TF-IDF scores
+                tfidf_scores = tfidf_matrix.toarray()[0]
+                scored_tokens = [(feature_names[i], tfidf_scores[i]) for i in range(len(feature_names))]
+                sorted_tokens = sorted(scored_tokens, key=lambda x: x[1], reverse=True)
+                
+                return [token for token, score in sorted_tokens[:top_n]]
+            except Exception as e:
+                import logging
+                logging.error(f"Error in TF-IDF fallback keyword extraction: {str(e)}")
+                # If everything fails, just return some generic keywords
+                return ["topic", "section", "content"]
+        
+        try:
+            keywords = self.keyword_extractor.extract_keywords(
+                text, 
+                keyphrase_ngram_range=(1, 2),  # Allow for 1-2 word keyphrases
+                stop_words='english',
+                top_n=top_n
+            )
+            
+            sorted_keywords = sorted(keywords, key=lambda x: x[1], reverse=True)
+            return [kw[0] for kw in sorted_keywords[:top_n]]
+        except Exception as e:
+            import logging
+            logging.error(f"Error in KeyBERT keyword extraction: {str(e)}")
+            # Fall back to TF-IDF method
+            return self.extract_keywords(text, top_n)
 
     def detect_speaker_changes(self, text):
         """

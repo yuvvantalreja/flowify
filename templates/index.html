@@ -5,9 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flowify</title>
     
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <!-- Force HTTPS for the static assets -->
+    <link rel="stylesheet" href="{{ request.url_for('static', path='styles.css') }}">
     <link type="text/css" rel="stylesheet" href="https://unpkg.com/jsmind@0.8.6/style/jsmind.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    
+    <!-- Add base tag to ensure all relative URLs use the correct scheme -->
+    <base href="{{ request.url }}">
 </head>
 <body>
     <div class="app-container">
@@ -55,9 +59,9 @@
                                 <div class="select-wrapper">
                                     <select id="modelSelector">
                                         <option value="Xenova/whisper-tiny.en">Whisper Tiny (Fast)</option>
-                                        <option value="Xenova/whisper-base.en">Whisper Base</option>
-                                        <option value="Xenova/whisper-small.en" selected>Whisper Small</option>
-                                        <option value="Xenova/whisper-medium.en">Whisper Medium</option>
+                                        <option value="Xenova/whisper-base.en" selected>Whisper Base</option>
+                                        <option value="Xenova/whisper-small.en">Whisper Small</option>
+                                        <option value="Xenova/whisper-medium.en">Whisper Medium (Slow)</option>
                                     </select>
                                     <i class="fas fa-chevron-down select-icon"></i>
                                 </div>
@@ -310,6 +314,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.16.0"></script>
     <script type="text/javascript" src="https://unpkg.com/jsmind@0.8.6/es6/jsmind.js"></script>
     <script>window.jsMind = jsMind;</script>
-    <script type="module" src="{{ url_for('static', filename='script.js') }}"></script>
+    <script type="module" src="{{ url_for('static', path='script.js') }}"></script>
 </body>
 </html>

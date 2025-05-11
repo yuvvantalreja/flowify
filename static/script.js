@@ -1,19 +1,51 @@
 import { pipeline, env } from 'https://unpkg.com/@xenova/transformers@2.16.0/dist/transformers.min.js';
 
-
 env.allowLocalModels = false;
 env.useBrowserCache = true;
 
+// Utility function to check if elements exist and log errors if they don't
+function getElements(selectors) {
+    const elements = {};
+    let allFound = true;
+    
+    for (const [key, selector] of Object.entries(selectors)) {
+        const element = selector.startsWith('.') ? 
+            document.querySelector(selector) : 
+            document.getElementById(selector);
+            
+        if (!element) {
+            console.warn(`Element not found: ${selector}`);
+            allFound = false;
+        }
+        
+        elements[key] = element;
+    }
+    
+    return { elements, allFound };
+}
 
-const videoPlayer = document.getElementById('videoPlayer');
-const fileInput = document.getElementById('fileInput');
-const transcribeButton = document.getElementById('transcribeButton');
-const analyzeButton = document.getElementById('analyzeButton');
-const transcriptionDiv = document.getElementById('transcription');
-const topicResultsDiv = document.getElementById('topicResults');
-const statusDiv = document.getElementById('status');
-const modelSelector = document.getElementById('modelSelector');
-const modelStatus = document.getElementById('modelStatus');
+// Global variables
+const { elements } = getElements({
+    videoPlayer: 'videoPlayer',
+    fileInput: 'fileInput',
+    transcribeButton: 'transcribeButton',
+    analyzeButton: 'analyzeButton',
+    transcriptionDiv: 'transcription',
+    topicResultsDiv: 'topicResults',
+    statusDiv: 'status',
+    modelSelector: 'modelSelector',
+    modelStatus: 'modelStatus'
+});
+
+const videoPlayer = elements.videoPlayer;
+const fileInput = elements.fileInput;
+const transcribeButton = elements.transcribeButton;
+const analyzeButton = elements.analyzeButton;
+const transcriptionDiv = elements.transcriptionDiv;
+const topicResultsDiv = elements.topicResultsDiv;
+const statusDiv = elements.statusDiv;
+const modelSelector = elements.modelSelector;
+const modelStatus = elements.modelStatus;
 
 let whisperPipeline = null;
 let transcriptText = '';
@@ -253,21 +285,53 @@ analyzeTopics = async function() {
     }
 };
 
+// Fixed file input change handler - properly handle video file selection
 fileInput.addEventListener('change', (e) => {
+    console.log("File input change event fired", e.target.files);
     const file = e.target.files[0];
     if (file) {
+        console.log("Processing selected file:", file.name, file.type);
+        
+        // Only process video files
+        if (!file.type.startsWith('video/')) {
+            alert('Please select a video file');
+            return;
+        }
+        
+        try {
         const videoURL = URL.createObjectURL(file);
+            console.log("Created video URL:", videoURL);
+            
         videoPlayer.src = videoURL;
+            videoPlayer.load(); // Force reload
+            
+            // Update UI
         transcribeButton.disabled = false;
         analyzeButton.disabled = true;
-        transcriptionDiv.textContent = '';
-        topicResultsDiv.textContent = '';
+            transcriptionDiv.innerHTML = '';
+            topicResultsDiv.innerHTML = '';
         transcriptText = '';
         statusDiv.textContent = 'Video loaded. Ready to transcribe.';
         
+            // Reset progress
         const progressBarFill = document.querySelector('.progress-bar-fill');
         if (progressBarFill) {
             progressBarFill.style.width = '0%';
+            }
+            
+            // Set active step
+            if (typeof window.setActiveStep === 'function') {
+                window.setActiveStep('upload');
+            }
+            
+            // Show the video element
+            videoPlayer.style.display = 'block';
+            
+            // Add a success message
+            console.log("Video file successfully loaded");
+        } catch (error) {
+            console.error("Error processing video file:", error);
+            alert('Error loading video: ' + error.message);
         }
     }
 });
@@ -473,20 +537,61 @@ modelSelector.addEventListener('change', async (e) => {
 
 // Initialize with the selected model when the page loads
 window.addEventListener('DOMContentLoaded', () => {
-    // Initialize all UI components
+    // Initialize all UI components with error handling for each
+    try {
     initThemeToggle();
-    initFAB();
-    initGallery();
-    initCustomVideoPlayer();
-    initUploadParticles();
-    initProgressSteps();
+    } catch (error) {
+        console.error('Failed to initialize theme toggle:', error);
+    }
     
-    // Original initialization
+    try {
+    initFAB();
+    } catch (error) {
+        console.error('Failed to initialize FAB:', error);
+    }
+    
+    try {
+    initGallery();
+    } catch (error) {
+        console.error('Failed to initialize gallery:', error);
+    }
+    
+    try {
+    initCustomVideoPlayer();
+    } catch (error) {
+        console.error('Failed to initialize custom video player:', error);
+    }
+    
+    try {
+    initUploadParticles();
+    } catch (error) {
+        console.error('Failed to initialize upload particles:', error);
+    }
+    
+    try {
+    initProgressSteps();
+    } catch (error) {
+        console.error('Failed to initialize progress steps:', error);
+    }
+    
+    // Initialize mindmap system
+    try {
     mindmap = new TopicMindmap();
+    } catch (error) {
+        console.error('Failed to initialize mindmap:', error);
+    }
+    
+    // Check for model selector and initialize whisper if available
+    const modelSelector = document.getElementById('modelSelector');
+    if (modelSelector) {
     initWhisper(modelSelector.value).catch(error => {
         console.error('Failed to initialize Whisper:', error);
+            const statusDiv = document.getElementById('status');
+            if (statusDiv) {
         statusDiv.textContent = 'Failed to initialize the transcription model';
+            }
     });
+    }
 });
 
 // Theme toggle functionality
@@ -557,13 +662,30 @@ function initGallery() {
     const galleryClose = document.getElementById('galleryClose');
     const galleryContent = document.getElementById('galleryContent');
     
+    // Exit early if required elements don't exist
+    if (!galleryContainer || !galleryClose || !galleryContent) {
+        console.warn('Gallery elements not found, skipping gallery initialization');
+        return;
+    }
+    
     // Add "Recent Mindmaps" option to FAB
     const fabContainer = document.getElementById('fabContainer');
+    if (!fabContainer) {
+        console.warn('FAB container not found, skipping recent mindmaps button');
+        return;
+    }
+    
+    const fabOptions = fabContainer.querySelector('.fab-options');
+    if (!fabOptions) {
+        console.warn('FAB options not found, skipping recent mindmaps button');
+        return;
+    }
+    
     const recentMindmapsBtn = document.createElement('button');
     recentMindmapsBtn.className = 'fab-option';
     recentMindmapsBtn.setAttribute('title', 'Recent Mindmaps');
     recentMindmapsBtn.innerHTML = '<i class="fas fa-history"></i>';
-    fabContainer.querySelector('.fab-options').appendChild(recentMindmapsBtn);
+    fabOptions.appendChild(recentMindmapsBtn);
     
     // Show gallery
     recentMindmapsBtn.addEventListener('click', () => {
@@ -2047,8 +2169,12 @@ function initCustomVideoPlayer() {
 function initUploadParticles() {
     const uploadContainer = document.querySelector('.upload-container');
     const particles = document.querySelector('.particles');
+    const fileInput = document.getElementById('fileInput');
     
-    if (!uploadContainer || !particles) return;
+    if (!uploadContainer || !particles || !fileInput) {
+        console.warn('Upload elements not found, skipping upload particles initialization');
+        return;
+    }
     
     // Create particles
     for (let i = 0; i < 15; i++) {
@@ -2074,30 +2200,66 @@ function initUploadParticles() {
         particles.appendChild(particle);
     }
     
-    // Show upload progress when uploading
-    const fileInput = document.getElementById('fileInput');
-    
-    uploadContainer.addEventListener('click', () => {
+    // Add click event to trigger file input - PROPERLY FIXED VERSION
+    uploadContainer.addEventListener('click', (e) => {
+        // Don't prevent default on the click event here
+        console.log("Upload container clicked");
+        // Directly trigger the file input click
         fileInput.click();
     });
     
-    // Drag and drop functionality with improved feedback
+    // Also add click handlers to the specific elements inside the container
+    const uploadIcon = uploadContainer.querySelector('.upload-icon-container');
+    const uploadText = uploadContainer.querySelector('.upload-text');
+    const uploadSubtext = uploadContainer.querySelector('.upload-subtext');
+    
+    if (uploadIcon) {
+        uploadIcon.addEventListener('click', (e) => {
+            console.log("Upload icon clicked");
+            fileInput.click();
+        });
+    }
+    
+    if (uploadText) {
+        uploadText.addEventListener('click', (e) => {
+            console.log("Upload text clicked");
+            fileInput.click();
+        });
+    }
+    
+    if (uploadSubtext) {
+        uploadSubtext.addEventListener('click', (e) => {
+            console.log("Upload subtext clicked");
+            fileInput.click();
+        });
+    }
+    
+    // Drag and drop functionality - keep these preventDefault calls
     uploadContainer.addEventListener('dragover', (e) => {
         e.preventDefault();
+        e.stopPropagation();
         uploadContainer.classList.add('active');
     });
     
-    uploadContainer.addEventListener('dragleave', () => {
+    uploadContainer.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         uploadContainer.classList.remove('active');
     });
     
     uploadContainer.addEventListener('drop', (e) => {
+        console.log("File dropped");
         e.preventDefault();
+        e.stopPropagation();
         uploadContainer.classList.remove('active');
         
         if (e.dataTransfer.files.length) {
+            console.log("Processing dropped file");
             fileInput.files = e.dataTransfer.files;
-            fileInput.dispatchEvent(new Event('change'));
+            
+            // Create and dispatch a proper change event
+            const event = new Event('change', { bubbles: true });
+            fileInput.dispatchEvent(event);
         }
     });
 }

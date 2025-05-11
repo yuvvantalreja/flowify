@@ -1,50 +1,52 @@
-<div align="left">
-  <img src="assets/logo_bg.png" alt="flowify" width="200"/>
-</div>
+# Flowify - Audio Transcription & Topic Analysis
 
+![Flowify Demo](https://i.imgur.com/6BEZ7NR.png)
 
+## About
 
-## Overview
-Flowify is an intelligent web application that transforms video content into intuitive, visual mind maps. By leveraging advanced NLP techniques and clustering algorithms, Flowify automatically organizes video content into coherent topics and subtopics. Flowify is purely algorithmic, and doesn't require any generative AI. (https://youtu.be/yjlV7t9mcps)
-
-<img width="1470" alt="Screenshot 2025-03-17 at 8 16 56 PM" src="https://github.com/user-attachments/assets/db5c6664-e840-4bd0-9e4f-c933eb757749" />
+Flowify is an AI-powered tool that transcribes audio/video content and automatically identifies topic segments. It creates interactive mindmaps to help users visualize the structure and flow of conversations, presentations, or lectures.
 
 ## Features
 
-<img width="1468" alt="Screenshot 2025-03-17 at 8 19 03 PM" src="https://github.com/user-attachments/assets/41d324de-e124-4624-90b7-3356f44ddbf2" />
+- **Audio Transcription**: Powered by OpenAI's Whisper model, providing accurate transcriptions with timestamps
+- **Topic Segmentation**: Automatically identifies topic boundaries and creates hierarchical topic structures
+- **Interactive Visualization**: Generates mindmaps to visualize the structure of the content
+- **Video Integration**: Timestamps in the transcript link directly to the corresponding point in the video
 
-- **Video Processing**: Upload and process videos of any length
+## How to Use
 
-<img width="1466" alt="Screenshot 2025-03-17 at 8 21 24 PM" src="https://github.com/user-attachments/assets/1a82ccbd-6a37-4ab7-97fd-dfeb522b4958" />
+1. **Upload Video**: Upload your video file (supports MP4, WebM, MOV)
+2. **Choose Model**: Select the transcription model (options range from tiny to medium)
+3. **Transcribe**: Start the transcription process
+4. **Analyze**: Generate the topic segmentation and visualization
+5. **Explore**: Navigate through the interactive mindmap and click on nodes to jump to the relevant sections in your video
 
-- **Automatic Transcription**: Convert speech to text with high accuracy
-- **Vector embeddings** of transcript segments
+## Models & Technology
 
-<img width="1470" alt="Screenshot 2025-03-17 at 8 19 55 PM" src="https://github.com/user-attachments/assets/0ed2f6c9-4119-4d95-890a-0d29f1c6909a" />
+- **Transcription**: OpenAI's Whisper (available in various sizes for speed/accuracy tradeoffs)
+- **Topic Segmentation**: Custom algorithm combining TF-IDF, cosine similarity, and hierarchical clustering
+- **Frontend**: HTML/CSS/JS with a responsive design
+- **Backend**: FastAPI for efficient API endpoints
 
-- **Similarity matrix generation** using cosine similarity
-- Dynamic **topic identification** through **sliding submatrix window** across diagonal
+## API Endpoints
 
-<img width="1469" alt="Screenshot 2025-03-17 at 8 20 57 PM" src="https://github.com/user-attachments/assets/e4c03ea3-0e91-4f84-87cd-a4dd6fbcd7eb" />
+- `POST /transcribe`: Transcribe audio from base64-encoded data
+- `POST /analyze`: Analyze transcript to extract topics
+- `POST /check_model`: Check if a model is available
 
-- **Visual Flow Charts**: Generate clear, hierarchical visualizations of content structure
+## Running Locally
 
-## Technical Architecture
-1. **Frontend**: Web interface for video upload and flow chart visualization
-2. **Backend Processing Pipeline**:
-   - Video transcription model (ran client side)
-   - Text segmentation    
-   - Vector embedding generation (nltk TfIdVectorizer)
-   - Clustering algorithm (sliding submatrix window)
-   - Flow chart generation (JSMind)
+```bash
+git clone https://huggingface.co/spaces/YOUR_USERNAME/flowify
+cd flowify
+pip install -r requirements.txt
+uvicorn fastapi_app:app --host 0.0.0.0 --port 7860 --reload
+```
 
-## Getting Started
-`pip install -r requirements.txt`
+## License
 
-`python3 app.py`
+MIT
 
-## Contributing
-This project was created during **TartanHacks 2025**. Feel free to contribute!
+## Credits
 
-## Team
-**Team Hackintosh**: [Yuvvan Talreja](https://github.com/yuvvantalreja), [Aryan Daga](https://github.com/aryand2006), [Samatva Kasat](https://github.com/samkas125), [Lakshya Gera](https://github.com/lakrage)
+Built using Hugging Face's transformers library and OpenAI's Whisper model.
